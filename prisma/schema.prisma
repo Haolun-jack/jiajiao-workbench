@@ -1,0 +1,161 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Student {
+  id           Int      @id @default(autoincrement())
+  name         String
+  grade        String
+  school       String?
+  phone        String?
+  subject      String   @default("物理")
+  goal         String?
+  note         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  lessonPlans  LessonPlan[]
+  classRecords ClassRecord[]
+  mistakes     Mistake[]
+  evaluations  Evaluation[]
+}
+
+model LessonPlan {
+  id             Int           @id @default(autoincrement())
+  studentId      Int?
+  student        Student?      @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  classNo        Int?
+  title          String
+  sourceType     String        @default("blank")
+  sourceFileName String?
+  sourceText     String?
+  content        String
+  status         String        @default("draft")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  classRecords   ClassRecord[]
+}
+
+model ClassRecord {
+  id           Int        @id @default(autoincrement())
+  studentId    Int
+  student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lessonPlanId Int?
+  lessonPlan   LessonPlan? @relation(fields: [lessonPlanId], references: [id], onDelete: SetNull)
+  classDate    DateTime
+  classNo      Int?
+  duration     Int?
+  attendance   String     @default("present")
+  content      String
+  homework     String?
+  performance  String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  mistakes     Mistake[]
+}
+
+model Mistake {
+  id               Int                @id @default(autoincrement())
+  studentId        Int
+  student          Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  classRecordId    Int?
+  classRecord      ClassRecord?       @relation(fields: [classRecordId], references: [id], onDelete: SetNull)
+  subject          String             @default("物理")
+  knowledgePoint   String
+  category         String?
+  source           String             @default("homework")
+  difficulty       String             @default("medium")
+  question         String
+  questionImagePath String?
+  studentAnswer    String?
+  process          String?
+  wrongAnswer      String?
+  correctAnswer    String?
+  status           String             @default("unmastered")
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  errorTypes       MistakeErrorType[]
+  indicators       MistakeIndicator[]
+}
+
+model ErrorType {
+  id          Int                @id @default(autoincrement())
+  code        String             @unique
+  name        String
+  description String?
+  mistakes    MistakeErrorType[]
+}
+
+model MistakeErrorType {
+  id          Int       @id @default(autoincrement())
+  mistakeId   Int
+  errorTypeId Int
+  mistake     Mistake   @relation(fields: [mistakeId], references: [id], onDelete: Cascade)
+  errorType   ErrorType @relation(fields: [errorTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([mistakeId, errorTypeId])
+}
+
+model EvaluationDimension {
+  id          Int                  @id @default(autoincrement())
+  code        String               @unique
+  name        String
+  description String?
+  sort        Int                  @default(0)
+  indicators  EvaluationIndicator[]
+}
+
+model EvaluationIndicator {
+  id               Int                 @id @default(autoincrement())
+  dimensionId      Int
+  dimension        EvaluationDimension @relation(fields: [dimensionId], references: [id], onDelete: Cascade)
+  name             String
+  judgementCriteria String?
+  lightStandard    String?
+  mediumStandard   String?
+  severeStandard   String?
+  intervention     String?
+  sort             Int                 @default(0)
+  mistakes         MistakeIndicator[]
+  items            EvaluationItem[]
+}
+
+model MistakeIndicator {
+  id          Int                 @id @default(autoincrement())
+  mistakeId   Int
+  indicatorId Int
+  mistake     Mistake             @relation(fields: [mistakeId], references: [id], onDelete: Cascade)
+  indicator   EvaluationIndicator @relation(fields: [indicatorId], references: [id], onDelete: Cascade)
+
+  @@unique([mistakeId, indicatorId])
+}
+
+model Evaluation {
+  id          Int              @id @default(autoincrement())
+  studentId   Int
+  student     Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  periodStart DateTime
+  periodEnd   DateTime
+  summary     String?
+  ruleVersion Int              @default(1)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  items       EvaluationItem[]
+}
+
+model EvaluationItem {
+  id            Int                 @id @default(autoincrement())
+  evaluationId  Int
+  evaluation    Evaluation          @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+  indicatorId   Int
+  indicator     EvaluationIndicator @relation(fields: [indicatorId], references: [id], onDelete: Cascade)
+  level         String              @default("none")
+  mistakeCount  Int                 @default(0)
+  totalMistakes Int                 @default(0)
+  note          String?
+  createdAt     DateTime            @default(now())
+}
